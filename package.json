@@ -1,0 +1,13 @@
+{
+  "name": "vixproxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vixproxy multi-provider LLM proxy (Hono + Supabase on Railway)",
+  "scripts": {
+    "build": "npm --prefix backend install && npm --prefix backend run build",
+    "start": "node backend/dist/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

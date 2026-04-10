@@ -134,20 +134,43 @@ With no `DATABASE_URL` set, the backend runs in dev mode: proxy-key auth passes 
 
 ## Deploying to Railway
 
-1. Create an empty Railway project.
-2. Add two services from this repo:
-   - **backend** with root directory `backend/`
-   - **frontend** with root directory `frontend/`
-3. Set env vars (backend service):
-   - `DATABASE_URL` — Supabase shared pooler, session mode (port 5432)
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-   - `MASTER_ENCRYPTION_KEY` — 64 hex chars
-   - Any provider fallback keys you want available
-4. Set env vars (frontend service):
-   - `VITE_BACKEND_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}`
+There are two supported setups:
+
+### Option A — single service at repo root (simplest)
+
+Create one Railway service pointed at the repo root (leave Root Directory empty). The root `package.json` + `railway.json` delegate to the backend:
+
+- Root `package.json` has a `build` script (`npm --prefix backend install && npm --prefix backend run build`) that Railpack runs after detecting Node.
+- Root `railway.json` sets `startCommand: node backend/dist/index.js` and `healthcheckPath: /health`.
+- A root `Dockerfile` is included as a fallback — switch `railway.json` builder to `DOCKERFILE` if you ever need to bypass Railpack.
+
+Set env vars:
+- `DATABASE_URL` — Supabase shared pooler, session mode (port 5432)
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- `MASTER_ENCRYPTION_KEY` — 64 hex chars
+- Any provider fallback keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+
+The frontend is not deployed in this setup — the backend is standalone.
+
+### Option B — two services (backend + frontend)
+
+Create one Railway project with **two services** pointing at the same repo:
+
+1. **backend** service — set **Root Directory** to `backend` in the service's dashboard settings. Railway will use `backend/railway.json` + `backend/package.json`.
+2. **frontend** service — set **Root Directory** to `frontend`. Railway will use `frontend/railway.json` and serve via Caddy.
+3. Set backend env vars as in Option A.
+4. Set `VITE_BACKEND_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}` on the frontend service (Railway reference variable).
 5. Each service's `railway.json` has `watchPatterns` scoped to its directory so cross-service rebuilds are avoided.
-6. Railpack auto-detects Hono/Node for the backend and Vite for the frontend. No extra configuration needed. **The backend binds to `process.env.PORT`** — do not override the start command for the frontend, or SPA auto-detection is disabled.
-7. Health check is `/health`; it returns 200 once the server is listening.
+
+Railpack auto-detects Hono/Node for the backend and Vite for the frontend. No extra configuration needed. **The backend binds to `process.env.PORT`** — do not override the start command for the frontend, or SPA auto-detection is disabled.
+
+Health check is `/health`; it returns 200 once the server is listening.
+
+### Troubleshooting
+
+**`Error creating build plan with Railpack`** — Railway is pointing at a directory with no detectable project. Either:
+- Option A: ensure the repo root has `package.json` + `railway.json` (both are committed on this repo).
+- Option B: set the service's **Root Directory** to `backend` or `frontend` in the Railway dashboard.
 
 ### Private networking
 
