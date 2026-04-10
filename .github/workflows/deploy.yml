@@ -1,0 +1,39 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.com/install.sh | sh
+
+      - name: Deploy
+        working-directory: backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_BACKEND }}
+        run: railway up -c --service backend
+
+  deploy-frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.com/install.sh | sh
+
+      - name: Deploy
+        working-directory: frontend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_FRONTEND }}
+        run: railway up -c --service frontend
