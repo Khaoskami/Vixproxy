@@ -1,13 +1,7 @@
 node_modules/
-dist/
 .env
-.env.*
-!.env.example
-*.log
+data/
+*.db
+*.db-shm
+*.db-wal
 .DS_Store
-coverage/
-.vscode/
-.idea/
-
-# Railway
-.railway/

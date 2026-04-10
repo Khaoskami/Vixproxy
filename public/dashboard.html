@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VixProxy — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e2e8f0;min-height:100vh;display:flex}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.03)}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,.4);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:220px;min-height:100vh;background:rgba(10,10,20,.95);border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:10}
+.sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-logo h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#6366f1,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-logo span{font-size:11px;color:#475569;display:block;margin-top:2px}
+nav{flex:1;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#64748b;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none}
+.nav-item:hover{color:#e2e8f0;background:rgba(255,255,255,.03)}
+.nav-item.active{color:#818cf8;background:rgba(99,102,241,.08);border-left-color:#6366f1}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#334155;padding:16px 20px 6px;font-weight:600}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06)}
+.user-chip{display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:white;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:#64748b}
+.logout-btn{background:none;border:none;color:#475569;cursor:pointer;padding:4px;border-radius:4px;transition:color .15s;flex-shrink:0}
+.logout-btn:hover{color:#ef4444}
+
+/* Main */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{padding:20px 32px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,20,.8);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+.topbar h2{font-size:18px;font-weight:600}
+.topbar-actions{display:flex;gap:10px}
+.content{padding:32px;flex:1}
+
+/* Cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:rgba(15,15,25,.8);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px}
+.stat-label{font-size:12px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.stat-value{font-size:28px;font-weight:700;margin-top:6px;color:#e2e8f0}
+.stat-sub{font-size:12px;color:#475569;margin-top:2px}
+.stat-card.accent .stat-value{color:#818cf8}
+
+/* Section */
+.section{background:rgba(15,15,25,.8);border:1px solid rgba(255,255,255,.07);border-radius:12px;margin-bottom:24px}
+.section-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.section-title{font-size:15px;font-weight:600}
+.section-body{padding:20px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white}
+.btn-primary:hover{opacity:.88}
+.btn-danger{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-ghost{background:rgba(255,255,255,.05);color:#94a3b8;border:1px solid rgba(255,255,255,.08)}
+.btn-ghost:hover{background:rgba(255,255,255,.09);color:#e2e8f0}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+td{padding:12px 12px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.mono{font-family:monospace;font-size:12px;color:#94a3b8;background:rgba(255,255,255,.05);padding:2px 6px;border-radius:4px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(34,197,94,.1);color:#86efac;border:1px solid rgba(34,197,94,.2)}
+.badge-red{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.badge-yellow{background:rgba(234,179,8,.1);color:#fde68a;border:1px solid rgba(234,179,8,.2)}
+.badge-purple{background:rgba(139,92,246,.1);color:#c4b5fd;border:1px solid rgba(139,92,246,.2)}
+.empty-state{text-align:center;padding:48px 20px;color:#475569}
+.empty-state svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:.4}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:#0f0f1a;border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:20px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:500;color:#94a3b8;margin-bottom:6px}
+.field input,.field select{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;color:#e2e8f0;font-size:14px;outline:none;transition:border-color .2s;font-family:inherit}
+.field input:focus,.field select:focus{border-color:#6366f1;background:rgba(99,102,241,.05)}
+.field select option{background:#1a1a2e}
+.field-hint{font-size:12px;color:#475569;margin-top:4px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.alert-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+.alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#86efac}
+.alert-info{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:#a5b4fc}
+
+/* Key reveal */
+.key-box{background:#0a0a0f;border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:14px;font-family:monospace;font-size:13px;word-break:break-all;color:#818cf8;position:relative;margin:16px 0}
+.copy-btn{position:absolute;top:8px;right:8px;background:rgba(99,102,241,.2);border:none;color:#818cf8;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+.copy-btn:hover{background:rgba(99,102,241,.35)}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.04);border-radius:8px;padding:4px;margin-bottom:20px}
+.tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:#64748b;transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:rgba(99,102,241,.2);color:#818cf8}
+
+/* Progress bar */
+.progress-wrap{background:rgba(255,255,255,.06);border-radius:999px;height:4px;margin-top:6px}
+.progress-bar{height:4px;border-radius:999px;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .3s}
+
+/* Toggle */
+.toggle{position:relative;display:inline-block;width:36px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:10px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#64748b;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:rgba(99,102,241,.5)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px);background:#818cf8}
+
+/* 2FA QR */
+.qr-wrap{text-align:center;margin:16px 0}
+.qr-wrap img{border-radius:8px;border:4px solid white}
+.secret-code{font-family:monospace;font-size:12px;background:rgba(255,255,255,.05);padding:8px 12px;border-radius:6px;text-align:center;word-break:break-all;color:#94a3b8;margin-top:8px}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .main{margin-left:0}
+}
+
+/* Panels */
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>⚔ VixProxy</h1>
+    <span>Secure LLM Proxy</span>
+  </div>
+  <nav>
+    <div class="nav-section">Main</div>
+    <a class="nav-item active" data-panel="overview" href="#overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </a>
+    <a class="nav-item" data-panel="keys" href="#keys">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      Proxy Keys
+    </a>
+    <a class="nav-item" data-panel="logs" href="#logs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Request Logs
+    </a>
+    <a class="nav-item" data-panel="settings" href="#settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <div id="adminNavSection" style="display:none">
+      <div class="nav-section">Admin</div>
+      <a class="nav-item" href="/admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+        Admin Panel
+      </a>
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUsername">Loading...</div>
+        <div class="user-role" id="sidebarRole">user</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <div class="topbar">
+    <h2 id="topbarTitle">Overview</h2>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" id="topbarAction" onclick="openCreateKeyModal()" style="display:none">+ New Proxy Key</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW PANEL -->
+    <div class="panel active" id="panel-overview">
+      <div class="stats-grid">
+        <div class="stat-card accent">
+          <div class="stat-label">Requests Today</div>
+          <div class="stat-value" id="statToday">—</div>
+          <div class="stat-sub">of <span id="statLimit">—</span> daily limit</div>
+          <div class="progress-wrap"><div class="progress-bar" id="statProgress" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Requests</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tokens Used</div>
+          <div class="stat-value" id="statTokens">—</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">CSAM Blocks</div>
+          <div class="stat-value" id="statCsam">—</div>
+          <div class="stat-sub">safety filter trips</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Recent Requests</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Provider</th><th>Model</th><th>Status</th>
+                <th>Tokens</th><th>Latency</th><th>Time</th>
+              </tr></thead>
+              <tbody id="recentLogsTable">
+                <tr><td colspan="6"><div class="empty-state">Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEYS PANEL -->
+    <div class="panel" id="panel-keys">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Your Proxy Keys</span>
+          <button class="btn btn-primary btn-sm" onclick="openCreateKeyModal()">+ New Key</button>
+        </div>
+        <div class="section-body">
+          <div class="alert alert-info" id="keysAlert"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Name</th><th>Key Prefix</th><th>Provider</th>
+                <th>Usage</th><th>CSAM Scan</th><th>Status</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="keysTable">
+                <tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection info -->
+      <div class="section">
+        <div class="section-header"><span class="section-title">Connect Your Client</span></div>
+        <div class="section-body">
+          <p style="font-size:14px;color:#94a3b8;margin-bottom:16px">Use your proxy key as the API key in any OpenAI-compatible client:</p>
+          <div style="display:grid;gap:16px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:8px">API Base URL</div>
+              <div class="key-box" id="apiBaseUrl" style="color:#94a3b8">
+                <button class="copy-btn" onclick="copyText(document.getElementById('apiBaseUrl').dataset.val)">Copy</button>
+                Loading...
+              </div>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:4px">SillyTavern Setup</div>
+              <p style="font-size:13px;color:#475569">API → OpenAI → Custom Endpoint → paste base URL → use proxy key as API Key</p>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:4px">JanitorAI Setup</div>
+              <p style="font-size:13px;color:#475569">Settings → API → Custom → endpoint + proxy key as Bearer token</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS PANEL -->
+    <div class="panel" id="panel-logs">
+      <div class="section">
+        <div class="section-header"><span class="section-title">Request History</span></div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Provider</th><th>Model</th><th>Status</th>
+                <th>Tokens</th><th>Latency</th><th>CSAM</th><th>Time</th>
+              </tr></thead>
+              <tbody id="logsTable">
+                <tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div class="panel" id="panel-settings">
+      <div class="section">
+        <div class="section-header"><span class="section-title">Two-Factor Authentication</span></div>
+        <div class="section-body">
+          <div id="2faStatus">Loading...</div>
+          <div id="2faSetupArea" style="display:none;margin-top:16px">
+            <div class="qr-wrap"><img id="2faQr" alt="QR Code"></div>
+            <div class="secret-code" id="2faSecret"></div>
+            <p style="font-size:13px;color:#64748b;text-align:center;margin:8px 0">Scan with Google Authenticator or Authy, then enter a code to confirm</p>
+            <div class="field" style="margin-top:12px">
+              <label>Verification Code</label>
+              <input type="text" id="2faCode" placeholder="000000" maxlength="6" inputmode="numeric">
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <button class="btn btn-primary" onclick="verify2FA()">Verify & Enable</button>
+              <button class="btn btn-ghost" onclick="cancel2FA()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Create Key Modal -->
+<div class="modal-overlay" id="createKeyModal">
+  <div class="modal">
+    <h3>Create Proxy Key</h3>
+    <div class="alert alert-error" id="createKeyError"></div>
+    <div class="field">
+      <label>Key Name</label>
+      <input type="text" id="newKeyName" placeholder="e.g. SillyTavern Main">
+    </div>
+    <div class="field">
+      <label>Provider</label>
+      <select id="newKeyProvider"></select>
+    </div>
+    <div class="field">
+      <label>Daily Request Limit</label>
+      <input type="number" id="newKeyLimit" value="100" min="1" max="10000">
+      <div class="field-hint">Max requests per day for this key</div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:10px">
+        <label class="toggle"><input type="checkbox" id="newKeyCsam" checked><span class="toggle-slider"></span></label>
+        CSAM Content Scanning
+      </label>
+      <div class="field-hint">Blocks requests containing minor-sexual content</div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:10px">
+        <label class="toggle"><input type="checkbox" id="newKeyContextLock"><span class="toggle-slider"></span></label>
+        Context Lock (NSFW restriction)
+      </label>
+      <div class="field-hint">Prevents NSFW content on this key even if allowed by provider</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('createKeyModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createKey()">Create Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Key Reveal Modal -->
+<div class="modal-overlay" id="keyRevealModal">
+  <div class="modal">
+    <h3>🔑 Your New Proxy Key</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:4px">Copy this now — it won't be shown again.</p>
+    <div class="key-box" id="revealedKey">
+      <button class="copy-btn" onclick="copyRevealedKey()">Copy</button>
+    </div>
+    <div class="alert alert-info" id="copyAlert" style="margin-top:12px">Copied to clipboard!</div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('keyRevealModal');loadKeys()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let providers = [];
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item[data-panel]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    const panel = el.dataset.panel;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + panel)?.classList.add('active');
+    document.getElementById('topbarTitle').textContent = el.textContent.trim();
+    document.getElementById('topbarAction').style.display = panel === 'keys' ? 'flex' : 'none';
+    if (panel === 'logs') loadLogs();
+    if (panel === 'keys') loadKeys();
+    if (panel === 'settings') load2FAStatus();
+  });
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const [me, stats, prvs] = await Promise.all([
+      fetch('/api/auth/me').then(r => r.json()),
+      fetch('/api/user/stats').then(r => r.json()),
+      fetch('/api/user/available-providers').then(r => r.json()),
+    ]);
+
+    currentUser = me;
+    providers = prvs;
+
+    // Sidebar
+    document.getElementById('sidebarUsername').textContent = me.username;
+    document.getElementById('sidebarRole').textContent = me.role;
+    document.getElementById('userAvatar').textContent = me.username[0].toUpperCase();
+    if (['admin','superadmin'].includes(me.role)) {
+      document.getElementById('adminNavSection').style.display = 'block';
+    }
+
+    // Stats
+    const used = stats.user?.requests_used_today || 0;
+    const limit = stats.user?.daily_request_limit || 200;
+    document.getElementById('statToday').textContent = used.toLocaleString();
+    document.getElementById('statLimit').textContent = limit.toLocaleString();
+    document.getElementById('statProgress').style.width = Math.min(100, (used/limit)*100) + '%';
+    document.getElementById('statTotal').textContent = (stats.totals?.requests || 0).toLocaleString();
+    document.getElementById('statTokens').textContent = fmtNum(stats.totals?.tokens || 0);
+    document.getElementById('statCsam').textContent = (stats.totals?.csamFlags || 0).toLocaleString();
+
+    // Recent logs
+    renderLogs(stats.recentLogs || [], 'recentLogsTable', 6);
+
+    // Provider select
+    const sel = document.getElementById('newKeyProvider');
+    sel.innerHTML = providers.length
+      ? providers.map(p => `<option value="${p.id}">${p.name} (${p.provider})</option>`).join('')
+      : '<option value="">No providers available</option>';
+
+    // Base URL
+    const base = window.location.origin + '/api/v1/chat/completions';
+    const el = document.getElementById('apiBaseUrl');
+    el.dataset.val = base;
+    el.childNodes[1]?.remove?.();
+    el.appendChild(document.createTextNode(base));
+
+  } catch (e) {
+    console.error(e);
+    window.location.href = '/login';
+  }
+}
+
+// ─── Keys ─────────────────────────────────────────────────────────────────
+async function loadKeys() {
+  const tbody = document.getElementById('keysTable');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>';
+  const keys = await fetch('/api/user/proxy-keys').then(r => r.json());
+
+  if (!keys.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No proxy keys yet. Create one to get started.</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = keys.map(k => `
+    <tr>
+      <td><strong>${esc(k.name)}</strong></td>
+      <td><span class="mono">${esc(k.key_prefix)}…</span></td>
+      <td><span class="badge badge-purple">${esc(k.provider)}</span></td>
+      <td>
+        ${k.daily_used}/${k.daily_limit}
+        <div class="progress-wrap" style="min-width:80px"><div class="progress-bar" style="width:${Math.min(100,(k.daily_used/k.daily_limit)*100)}%"></div></div>
+      </td>
+      <td>${k.csam_scan_enabled ? '<span class="badge badge-green">✓ On</span>' : '<span class="badge badge-red">Off</span>'}</td>
+      <td><span class="badge ${k.status==='active'?'badge-green':'badge-red'}">${k.status}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="revokeKey('${k.id}')">Revoke</button></td>
+    </tr>
+  `).join('');
+}
+
+async function createKey() {
+  const name = document.getElementById('newKeyName').value.trim();
+  const mkId = document.getElementById('newKeyProvider').value;
+  const limit = parseInt(document.getElementById('newKeyLimit').value);
+  const csam = document.getElementById('newKeyCsam').checked;
+  const ctxLock = document.getElementById('newKeyContextLock').checked;
+  const errEl = document.getElementById('createKeyError');
+  errEl.style.display = 'none';
+
+  if (!name || !mkId) { errEl.textContent = 'Name and provider required'; errEl.style.display = 'block'; return; }
+
+  const res = await fetch('/api/user/proxy-keys', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, master_key_id: mkId, daily_limit: limit, csam_scan_enabled: csam, context_lock_enabled: ctxLock })
+  });
+  const data = await res.json();
+
+  if (data.error) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+
+  closeModal('createKeyModal');
+  // Show key reveal
+  const box = document.getElementById('revealedKey');
+  box.dataset.key = data.key_value;
+  box.childNodes[box.childNodes.length-1]?.remove?.();
+  box.appendChild(document.createTextNode(data.key_value));
+  document.getElementById('copyAlert').style.display = 'none';
+  openModal('keyRevealModal');
+}
+
+async function revokeKey(id) {
+  if (!confirm('Revoke this key? It will stop working immediately.')) return;
+  await fetch(`/api/user/proxy-keys/${id}`, { method: 'DELETE' });
+  loadKeys();
+}
+
+function copyRevealedKey() {
+  const key = document.getElementById('revealedKey').dataset.key;
+  navigator.clipboard.writeText(key);
+  const alert = document.getElementById('copyAlert');
+  alert.style.display = 'block';
+}
+
+// ─── Logs ─────────────────────────────────────────────────────────────────
+async function loadLogs() {
+  const tbody = document.getElementById('logsTable');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Loading...</div></td></tr>';
+  const data = await fetch('/api/user/stats').then(r => r.json());
+  renderLogs(data.recentLogs || [], 'logsTable', 50);
+}
+
+function renderLogs(logs, targetId, max) {
+  const tbody = document.getElementById(targetId);
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No requests yet.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.slice(0, max).map(l => `
+    <tr>
+      <td>${l.provider || '—'}</td>
+      <td style="font-size:12px;color:#94a3b8">${esc(l.model || '—')}</td>
+      <td><span class="badge ${l.status==='success'?'badge-green':l.status==='blocked_csam'?'badge-red':'badge-yellow'}">${l.status}</span></td>
+      <td>${(l.total_tokens||0).toLocaleString()}</td>
+      <td>${l.latency_ms ? l.latency_ms+'ms' : '—'}</td>
+      <td>${l.csam_flagged ? '<span class="badge badge-red">⚠ Flagged</span>' : '—'}</td>
+      <td style="font-size:12px;color:#475569">${relTime(l.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+// ─── 2FA ─────────────────────────────────────────────────────────────────
+async function load2FAStatus() {
+  const area = document.getElementById('2faStatus');
+  const user = await fetch('/api/auth/me').then(r => r.json());
+  if (user.totp_enabled) {
+    area.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge badge-green">✓ 2FA Enabled</span>
+        <button class="btn btn-danger btn-sm" onclick="disable2FA()">Disable 2FA</button>
+      </div>`;
+  } else {
+    area.innerHTML = `
+      <p style="font-size:14px;color:#64748b;margin-bottom:12px">Protect your account with an authenticator app.</p>
+      <button class="btn btn-primary btn-sm" onclick="setup2FA()">Enable 2FA</button>`;
+  }
+}
+
+async function setup2FA() {
+  const res = await fetch('/api/auth/2fa/setup', { method: 'POST' });
+  const data = await res.json();
+  document.getElementById('2faQr').src = data.qr;
+  document.getElementById('2faSecret').textContent = data.secret;
+  document.getElementById('2faSetupArea').style.display = 'block';
+}
+
+async function verify2FA() {
+  const code = document.getElementById('2faCode').value.trim();
+  const res = await fetch('/api/auth/2fa/verify', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ totp: code })
+  });
+  const data = await res.json();
+  if (data.success) { document.getElementById('2faSetupArea').style.display = 'none'; load2FAStatus(); }
+  else alert(data.error || 'Invalid code');
+}
+
+function cancel2FA() { document.getElementById('2faSetupArea').style.display = 'none'; }
+
+async function disable2FA() {
+  const pw = prompt('Enter your password to disable 2FA:');
+  if (!pw) return;
+  const res = await fetch('/api/auth/2fa/disable', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ password: pw })
+  });
+  const data = await res.json();
+  if (data.success) load2FAStatus();
+  else alert(data.error);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openCreateKeyModal() { document.getElementById('createKeyError').style.display = 'none'; openModal('createKeyModal'); }
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtNum(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+function relTime(ts) {
+  if (!ts) return '—';
+  const diff = Math.floor(Date.now()/1000) - ts;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function copyText(t) {
+  navigator.clipboard.writeText(t);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+init();
+</script>
+</body>
+</html>

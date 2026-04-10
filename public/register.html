@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VixProxy — Register</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(99,102,241,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.05) 1px,transparent 1px); background-size: 40px 40px; pointer-events: none; }
+  .card { background: rgba(15,15,25,.9); border: 1px solid rgba(99,102,241,.2); border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; backdrop-filter: blur(20px); position: relative; z-index: 1; }
+  .logo { text-align: center; margin-bottom: 32px; }
+  .logo h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .logo p { color: #64748b; font-size: 14px; margin-top: 4px; }
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
+  input { width: 100%; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 11px 14px; color: #e2e8f0; font-size: 14px; transition: border-color .2s; outline: none; font-family: inherit; }
+  input:focus { border-color: #6366f1; background: rgba(99,102,241,.05); }
+  .btn { width: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .2s; font-family: inherit; margin-top: 8px; }
+  .btn:hover { opacity: .9; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .hint { font-size: 12px; color: #475569; margin-top: 4px; }
+  .link-row { text-align: center; margin-top: 20px; font-size: 14px; color: #64748b; }
+  .link-row a { color: #818cf8; text-decoration: none; font-weight: 500; }
+  .optional-badge { font-size: 11px; color: #475569; background: rgba(255,255,255,.05); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="card">
+  <div class="logo">
+    <h1>⚔ VixProxy</h1>
+    <p>Create an account</p>
+  </div>
+  <div class="error" id="err"></div>
+  <form id="regForm">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="username" required placeholder="your_username" autocomplete="username">
+      <div class="hint">3-32 chars, letters/numbers/_ only</div>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" required placeholder="Min 8 characters" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>Invite Code <span class="optional-badge">optional — for admin access</span></label>
+      <input type="text" id="invite_code" placeholder="Leave blank for standard user">
+    </div>
+    <button type="submit" class="btn" id="regBtn">Create Account</button>
+  </form>
+  <div class="link-row">Already have an account? <a href="/login">Sign In</a></div>
+</div>
+<script>
+document.getElementById('regForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('regBtn');
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+
+  const body = {
+    username: document.getElementById('username').value.trim(),
+    password: document.getElementById('password').value,
+  };
+  const invite = document.getElementById('invite_code').value.trim();
+  if (invite) body.invite_code = invite;
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = '/dashboard';
+    } else {
+      err.textContent = data.error || 'Registration failed';
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = 'Network error.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
+});
+</script>
+</body>
+</html>

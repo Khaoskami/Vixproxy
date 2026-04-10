@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VixProxy — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(99,102,241,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.05) 1px,transparent 1px); background-size: 40px 40px; pointer-events: none; }
+  .card { background: rgba(15,15,25,.9); border: 1px solid rgba(99,102,241,.2); border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; backdrop-filter: blur(20px); position: relative; z-index: 1; }
+  .logo { text-align: center; margin-bottom: 32px; }
+  .logo h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .logo p { color: #64748b; font-size: 14px; margin-top: 4px; }
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
+  input { width: 100%; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 11px 14px; color: #e2e8f0; font-size: 14px; transition: border-color .2s; outline: none; font-family: inherit; }
+  input:focus { border-color: #6366f1; background: rgba(99,102,241,.05); }
+  .btn { width: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .2s, transform .1s; font-family: inherit; margin-top: 8px; }
+  .btn:hover { opacity: .9; }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .link-row { text-align: center; margin-top: 20px; font-size: 14px; color: #64748b; }
+  .link-row a { color: #818cf8; text-decoration: none; font-weight: 500; }
+  .link-row a:hover { text-decoration: underline; }
+  .totp-field { display: none; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="card">
+  <div class="logo">
+    <h1>⚔ VixProxy</h1>
+    <p>Secure LLM Key Proxy</p>
+  </div>
+  <div class="error" id="err"></div>
+  <form id="loginForm">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="username" autocomplete="username" required placeholder="your_username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+    </div>
+    <div class="field totp-field" id="totpField">
+      <label>2FA Code</label>
+      <input type="text" id="totp" placeholder="000000" maxlength="6" inputmode="numeric">
+    </div>
+    <button type="submit" class="btn" id="loginBtn">Sign In</button>
+  </form>
+  <div class="link-row">
+    Don't have an account? <a href="/register">Register</a>
+  </div>
+</div>
+<script>
+let needs2fa = false;
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in...';
+
+  const body = {
+    username: document.getElementById('username').value.trim(),
+    password: document.getElementById('password').value,
+  };
+  if (needs2fa) body.totp = document.getElementById('totp').value.trim();
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (data.requires2fa) {
+      needs2fa = true;
+      document.getElementById('totpField').style.display = 'block';
+      document.getElementById('totp').focus();
+      err.textContent = 'Enter your 2FA code';
+      err.style.display = 'block'; err.style.background = 'rgba(99,102,241,.1)';
+      err.style.borderColor = 'rgba(99,102,241,.3)'; err.style.color = '#a5b4fc';
+    } else if (data.success) {
+      window.location.href = '/dashboard';
+    } else {
+      err.textContent = data.error || 'Login failed';
+      err.style.display = 'block'; err.style.background = '';
+      err.style.borderColor = ''; err.style.color = '';
+    }
+  } catch (e) {
+    err.textContent = 'Network error. Please try again.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = needs2fa ? 'Verify 2FA' : 'Sign In';
+  }
+});
+</script>
+</body>
+</html>
