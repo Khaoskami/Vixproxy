@@ -1,4 +1,23 @@
 import 'dotenv/config';
+
+// ─── Validate required env vars BEFORE importing anything that reads them ──
+// database.js opens the SQLite file on import and utils/crypto.js throws
+// when ENCRYPTION_KEY is missing or malformed. Validating after those imports
+// would bury the clear "FATAL: Missing X" message under a cryptic stack trace.
+const REQUIRED = ['SESSION_SECRET', 'ENCRYPTION_KEY'];
+for (const key of REQUIRED) {
+  if (!process.env[key]) {
+    console.error(`FATAL: Missing environment variable: ${key}`);
+    process.exit(1);
+  }
+}
+if (process.env.ENCRYPTION_KEY.length !== 64) {
+  console.error(
+    `FATAL: ENCRYPTION_KEY must be 64 hex chars (32 bytes), got ${process.env.ENCRYPTION_KEY.length}`
+  );
+  process.exit(1);
+}
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -17,15 +36,6 @@ import authRoutes from './routes/auth.js';
 import proxyRoutes from './routes/proxy.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
-
-// ─── Validate required env vars ─────────────────────────────────────────────
-const REQUIRED = ['SESSION_SECRET', 'ENCRYPTION_KEY'];
-for (const key of REQUIRED) {
-  if (!process.env[key]) {
-    logger.error(`FATAL: Missing environment variable: ${key}`);
-    process.exit(1);
-  }
-}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -161,8 +171,17 @@ setInterval(runDailyReset, 60 * 60 * 1000);
 runDailyReset(); // Run on startup too
 
 // ─── Start ────────────────────────────────────────────────────────────────
-app.listen(PORT, '0.0.0.0', () => {
+// Log before listen() so we can see the bound port even if something crashes
+// during the listen callback. process.env.PORT comes from Railway's runtime
+// injection; hardcoding internalPort in railway.toml caused a mismatch when
+// Railway routed to 3000 while the app bound to a different injected value.
+console.log(`[startup] binding 0.0.0.0:${PORT} (process.env.PORT=${process.env.PORT ?? 'unset'})`);
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`VixProxy running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+});
+server.on('error', (err) => {
+  console.error(`[startup] listen failed on port ${PORT}:`, err);
+  process.exit(1);
 });
 
 export default app;

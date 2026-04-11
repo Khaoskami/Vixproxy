@@ -130,9 +130,13 @@ This is what the screenshot in the issue shows. In order of likelihood:
 4. **Healthcheck timeout too short.** `railway.toml` ships with `healthcheckTimeout = 300`. Don't lower it below ~60s; cold-starting `better-sqlite3` and creating the schema can take 10–20s on a fresh volume.
 5. **Wrong port.** The server reads `process.env.PORT` and binds `0.0.0.0`. Don't override the start command, and leave `PORT=3000` matching `railway.toml`'s `internalPort`.
 
-### Server boots but `/api/health` returns 502 from Railway's edge
+### Healthcheck shows "service unavailable" for the full retry window
 
-The internal port in `railway.toml` (`3000`) must match what the server binds. If you've set `PORT` to anything other than `3000`, also update `[service].internalPort` in `railway.toml`.
+Different symptom from a crash loop: the container is up but Railway's edge can't reach it. The usual cause is a **port mismatch** — Railway injects its own `PORT` env var at runtime (which overrides the Dockerfile's `ENV PORT=3000`), the app binds to Railway's injected value, and the healthcheck tries a different port.
+
+The current `railway.toml` intentionally does **not** set `[service].internalPort`, so Railway auto-detects the listening port. Don't re-add that field unless you also pin `PORT` in Variables to the same value.
+
+Verification: the server now logs `[startup] binding 0.0.0.0:<PORT> (process.env.PORT=<value>)` immediately before `listen()`. Check the deploy logs — that line tells you exactly what port the app thinks it's on.
 
 ### `EACCES: permission denied, open '/app/data/vixproxy.db'`
 

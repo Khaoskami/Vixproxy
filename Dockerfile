@@ -11,16 +11,15 @@ WORKDIR /app
 RUN addgroup -S vixproxy && adduser -S vixproxy -G vixproxy
 COPY --from=builder /app /app
 RUN mkdir -p /app/data && chown -R vixproxy:vixproxy /app/data
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DB_PATH=/app/data/vixproxy.db
 EXPOSE 3000
 
-# Entrypoint runs as root only long enough to fix volume ownership
-# (Railway-mounted volumes come back as root:root on every boot), then
-# drops to the unprivileged vixproxy user before exec'ing the server.
-RUN printf '#!/bin/sh\nset -e\nmkdir -p /app/data\nchown -R vixproxy:vixproxy /app/data\nexec su-exec vixproxy "$@"\n' > /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
+# tini is PID 1; the entrypoint script fixes /app/data ownership and
+# drops to the unprivileged vixproxy user via su-exec before exec'ing node.
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "src/server.js"]
